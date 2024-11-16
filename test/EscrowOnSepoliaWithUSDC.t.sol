@@ -58,12 +58,12 @@ contract MarketplaceEscrowTest is Test {
         vm.prank(seller);
         escrow.list("username1", 100 * 1e6);
 
-        (string memory username, uint256 price, address sellerAddress, bool active) = escrow.listings("username1");
+        (string memory username, uint256 price, address sellerAddress, MarketplaceEscrow.ListingStatus status) = escrow.listings("username1");
 
         assertEq(username, "username1");
         assertEq(price, 100 * 1e6);
         assertEq(sellerAddress, seller);
-        assertTrue(active);
+        assertEq(uint256(status), uint256(MarketplaceEscrow.ListingStatus.LISTING));
     }
 
     function testDeposit() public {
@@ -76,10 +76,10 @@ contract MarketplaceEscrowTest is Test {
         escrow.deposit("username1", 100 * 1e6);
 
         address buyerAddress = escrow.escrow("username1");
-        (, , , bool active) = escrow.listings("username1");
+        (, , , MarketplaceEscrow.ListingStatus status) = escrow.listings("username1");
 
         assertEq(buyerAddress, buyer);
-        assertFalse(active); // Listing is no longer active
+        assertEq(uint256(status), uint256(MarketplaceEscrow.ListingStatus.PROCESSING)); // Listing is no longer active
         assertEq(usdc.balanceOf(address(escrow)), 100 * 1e6);
     }
 

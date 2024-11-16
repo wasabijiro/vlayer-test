@@ -4,11 +4,13 @@ pragma solidity ^0.8.13;
 import {IERC20} from "@openzeppelin-contracts-5.0.1/token/ERC20/IERC20.sol";
 
 contract MarketplaceEscrow {
+    enum ListingStatus { LISTING, PROCESSING, DONE }
+
     struct Listing {
         string username;
         uint256 price;
         address seller;
-        bool active;
+        ListingStatus status;
     }
 
     address public usdcToken;
@@ -30,7 +32,7 @@ contract MarketplaceEscrow {
             username: username,
             price: price,
             seller: msg.sender,
-            active: true
+            status: ListingStatus.LISTING
         });
 
         emit Listed(username, price, msg.sender);
@@ -38,13 +40,13 @@ contract MarketplaceEscrow {
 
     function deposit(string memory username, uint256 price) external {
         Listing storage listing = listings[username];
-        require(listing.active, "Listing not active");
+        require(listing.status == ListingStatus.LISTING, "Listing not active");
         require(listing.price == price, "Price mismatch");
         require(listing.seller != address(0), "Invalid listing");
 
         IERC20(usdcToken).transferFrom(msg.sender, address(this), price);
         escrow[username] = msg.sender;
-        listing.active = false;
+        listing.status = ListingStatus.PROCESSING;
 
         emit Deposited(username, price, msg.sender);
     }
@@ -55,7 +57,7 @@ contract MarketplaceEscrow {
         require(msg.sender == buyer, "Only buyer can withdraw");
 
         uint256 amount = listings[username].price;
-        listings[username].active = false;
+        listings[username].status = ListingStatus.DONE;
         delete escrow[username];
 
         IERC20(usdcToken).transfer(listings[username].seller, amount);
